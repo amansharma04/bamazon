@@ -1,133 +1,101 @@
-var mysql = require("mysql");
-var prompt = require("prompt");
+//add variables that show which node packages will be required
+var mysql = require('mysql');
+var inquirer = require('inquirer');
 
-//  mysql connection
+// create the connection information for the sql database
 var connection = mysql.createConnection({
-    host : "localhost",
-    user : "root",
-    password : "Password",
-    database : "Bamazon"
+    host: "localhost",
+    port: 3306,
+    user: "root",
+    password: "Password!",
+    database: "Bamazon.sql"
 });
 
-// Connecting to the Bamazon Database
-connection.connect(function(err){
-    if(err){
-    console.log('Error connecting to Db');
-    return;
-    }
-    console.log('Connection established');
+//Asks user what they'd like to buy
+function beginPrompt() {
 
-    var schema = {
-        properties: {
-            ID: {
-            message: "Please enter the ID of the product you would like to buy.",
-            pattern: /^[0-9][0-9]$|^[0-9]$/,
-            required: true
-            },
-            howMany: {
-            message: "Please enter how many you would like to buy.",
-            pattern: /^[0-9][0-9]$|^[0-9][0-9][0-9]$/,
-            required: true
-            }
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'item_id',
+            message: 'Hello, please enter the Item ID for the item you will be purchasing',
+        },
+        {
+            type: 'input',
+            name: 'quantity',
+            message: 'How many of this item would you like to buy?',
+
         }
-    };
+    ]).then(function (input) {
 
-    var schema2 = {
-        properties: {
-            AnotherPurchase: {
-            message: "Would you like to buy another item?.",
-            pattern: /(no|n|yes|y)/,
-            required: true
-            },
-        }
-    };
+        var item = input.item_id;
+        var quantity = input.quantity;
+        var startCnstrct = 'SELECT * FROM products WHERE ?';
 
-// Function stop to the app
-var stopApp = function(){
-    return next(err);
-}
-// Function to start the app
-var beginApp = function(){
-    connection.query("SELECT * FROM Products", function(err, result) {
-        if (err) throw err;
-        return (getBamazonProducts(result));
-      
-      });
-}
+        connection.query(startCnstrct, { item_id: item }, function (err, data) {
+            if (err) throw err;
 
-    // Function to display all of the products available for sale in a table
-    var getBamazonProducts = function (products){
-        console.log("Hello, Welcome to Bamazon! Here are all of the products, their costs, and current stock.");
-        for (var i = 0; i < products.length; i++) {
-            var productsResults = "\r\n"+
-            "ItemID: " + products[i].ItemID+"\r\n"+
-            "Product Description: " + products[i].ProductName+"\r\n"+
-            "Department: " + products[i].DepartmentName+"\r\n"+
-            "Price: $ "+ products[i].Price+"\r\n"+
-            "Current Stock: " + products[i].StockQuantity;
-            console.log(productsResults);
-        }
-        userSelectID();
-    }
+            if (data.length === 0) {
+                console.log('The item id you entered is not in our system.');
+                showItems();
 
-    // Function to get the user selection
-    var userSelectID = function(){
-        prompt.start();
-        console.log("Please enter the ID of the product you would like to buy.");
-
-        prompt.get(schema, function (err, result) {
-            if (err){
-                console.log(err)
-            }
-            //console.log(result);
-            var userChoiceID = parseInt(result.ID);
-            var userChoiceHowMany = parseInt(result.howMany);
-            // console.log("id=" + userChoiceID + " how many=" + userChoiceHowMany);
-
-            // Function to check the inventory of an item
-            var checkInventory = function(){
-                connection.query('SELECT * FROM Products WHERE ItemID =' + userChoiceID, function(err, result) {
-                    if (err) throw err;
-                    //console.log(result);
-
-                    var userWantsToBuy = userChoiceHowMany;
-                    var productInventory = result[0].StockQuantity;
-                    var productsPrice = result[0].Price;
-                    var isInStock = productInventory - userWantsToBuy;
-                    var totalCost= productsPrice * userWantsToBuy;
-
-                    if (userWantsToBuy > productInventory || productInventory === 0){
-                        console.log("Apologies but there isn't enough in stock to complete your order. Please try again."+"\r\n"+"\r\n");
-                        userSelectID();
-                    } else {
-                        console.log("There are "+result[0].StockQuantity+" of "+result[0].ProductName);
-                        console.log("You are purchasing "+ userWantsToBuy +" "+result[0].ProductName+"s at $"+ result[0].Price+" per item.");
-                        console.log("Your total is $"+totalCost);
-                        connection.query('UPDATE Products SET StockQuantity = '+isInStock+' WHERE ItemID ='+userChoiceID, function(err, result){
+            } else {
+                var productData = data[0];
+                if (quantity <= productData.stock_quantity) {
+                    console.log('Congratulations, the product you requested is in stock! Placing order!');
+                    var updatestartCnstrct = 'UPDATE products SET stock_quantity = ' + (productData.stock_quantity - quantity) + ' WHERE item_id = ' + item;
+                    // Update stock
+                    connection.query(updatestartCnstrct, function (err, data) {
                         if (err) throw err;
-                            connection.query('SELECT ItemID, ProductName, DepartmentName, Price, StockQuantity FROM products WHERE ItemID ='+userChoiceID, function(err, result){
-                                //console.log(result);
-                            }); 
-                        });
-                        prompt.get(schema2, function (err, result) {
-                            if (err){
-                                console.log(err)
-                            }
-                            console.log(result);
-                            var userAnswer = result.AnotherPurchase;
-                            if (userAnswer === "n" || userAnswer === "no"){
-                                stopApp();
-                            }else{
-                                beginApp();
-                            }   
-                        });
-                    }
-                  });
-            };
-            checkInventory();
-        });
-    }
 
-// start the app
-beginApp();
-});
+                        console.log('Thank you for your order! Your order total is $' + productData.price * quantity);
+                        console.log('We appreciate your business. Please come again.');
+                        console.log("\n****************************************************************\n");
+
+                        // disconnect
+                        connection.end();
+                    })
+                } else {
+                    console.log('Oh no! We are out of this item. Please change your order, or contact us at 1-800-bmzn');
+                    console.log("\n****************************************************************\n");
+
+                    showItems();
+                }
+            }
+        })
+    })
+}
+
+// this function will show current stock of products
+function showItems() {
+
+    startCnstrct = 'SELECT * FROM products';
+
+    connection.query(startCnstrct, function (err, data) {
+        if (err) throw err;
+
+        console.log('\nHere is what we have in stock:');
+
+        var inputDisp = '';
+        for (var i = 0; i < data.length; i++) {
+            inputDisp = '';
+            inputDisp += 'Item ID: ' + data[i].item_id + '  *  ';
+            inputDisp += 'Product Name: ' + data[i].product_name + '  *  ';
+            inputDisp += 'Department: ' + data[i].department_name + '  *  ';
+            inputDisp += 'Price: $' + data[i].price + '\n';
+
+            console.log(inputDisp);
+        }
+
+        console.log("***************************************************************\n");
+
+        beginPrompt();
+    })
+}
+
+function startApp() {
+    showItems();
+}
+
+//Begin app
+startApp();
