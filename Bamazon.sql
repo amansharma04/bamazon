@@ -9,13 +9,13 @@ CREATE TABLE products (
  PRIMARY KEY (item_id)
 );
 INSERT INTO products (product_name, department_name, price, stock_quantity)
-VALUES ("AA Batteries 20-pack", "Household Supplies", 10.00, 23),
-("Cordless Drill", "Tools and Home Improvement", 30.00, 5),
-("LED Video Projector", "Electronics", 400.00, 3),
-("Memory Foam Pillow 2-pack", "Home and Kitchen", 40.00, 12),
-("Dry Erase Marker Set", "Office Products", 6.24, 39),
-("Magnetic Dry Erase Board", "Office Products", 31.90, 8),
-("Electronic Scale", "Health and Personal Care", 18.99, 54),
-("Stainless Steel Water Bottle", "Home and Kitchen", 13.99, 47),
-("Combination Padlock", "Tools and Home Improvement", 5.01, 113),
-("Cell Phone Charging Cable", "Cell Phone Accessories", 9.99, 148);
+VALUES ("Bounties", "Household Supplies", 10.00, 23),
+("Screws", "Tools and Home Improvement", 30.00, 5),
+("ipad", "Electronics", 400.00, 3),
+("Toaster", "Home and Kitchen", 40.00, 12),
+("Printer", "Office Products", 6.24, 39),
+("Staplers", "Office Products", 31.90, 8),
+("Weights", "Health and Personal Care", 18.99, 54),
+("Water Gallons", "Home and Kitchen", 13.99, 47),
+("Drill", "Tools and Home Improvement", 5.01, 113),
+("Chargers", "Cell Phone Accessories", 9.99, 148);
